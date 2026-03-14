@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TestForge — AI Test Case Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6aff;
+    --accent2: #ff6a6a;
+    --accent3: #6affb8;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --positive: #6affb8;
+    --negative: #ff6a6a;
+    --edge: #ffd36a;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 48px 0 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .logo-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .logo h1 {
+    font-family: var(--font-head);
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .logo h1 span { color: var(--accent); }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .status-pill:hover { border-color: var(--accent); }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  .dot.ok { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+  .dot.err { background: var(--accent2); }
+
+  /* ── Form ── */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 32px;
+  }
+
+  .form-card h2 {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 28px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-card h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px; height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .field { margin-bottom: 20px; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  textarea, input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 14px 16px;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  textarea { min-height: 90px; }
+  input[type="number"] { width: 100px; }
+
+  textarea:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,0.12);
+  }
+
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; }
+
+  /* checkboxes */
+  .check-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .check-pill {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .check-pill input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+  .check-pill span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .check-pill input:checked + span {
+    color: var(--text);
+    border-color: currentColor;
+  }
+
+  .check-pill.pos input:checked + span { color: var(--positive); background: rgba(106,255,184,0.07); }
+  .check-pill.neg input:checked + span { color: var(--negative); background: rgba(255,106,106,0.07); }
+  .check-pill.edge input:checked + span { color: var(--edge); background: rgba(255,211,106,0.07); }
+
+  .dot-sm {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+  }
+  .pos .dot-sm { background: var(--positive); }
+  .neg .dot-sm { background: var(--negative); }
+  .edge .dot-sm { background: var(--edge); }
+
+  /* ── Submit button ── */
+  .btn-run {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    margin-top: 28px;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-run:hover:not(:disabled) {
+    background: #9480ff;
+    box-shadow: 0 8px 24px rgba(124,106,255,0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ── Loader ── */
+  .loader {
+    display: none;
+    text-align: center;
+    padding: 60px 0;
+  }
+
+  .loader.show { display: block; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader p {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .loader .gen-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 6px;
+  }
+
+  /* ── Results ── */
+  #results { display: none; }
+  #results.show { display: block; }
+
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+
+  .results-header h2 {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .stat-chip.total  { color: var(--text); border-color: var(--border); }
+  .stat-chip.pos    { color: var(--positive); border-color: rgba(106,255,184,0.3); background: rgba(106,255,184,0.06); }
+  .stat-chip.neg    { color: var(--negative); border-color: rgba(255,106,106,0.3); background: rgba(255,106,106,0.06); }
+  .stat-chip.edge   { color: var(--edge);     border-color: rgba(255,211,106,0.3); background: rgba(255,211,106,0.06); }
+
+  /* tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .tab:hover { color: var(--text); }
+
+  .tab.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .tab.active.pos  { color: var(--positive); }
+  .tab.active.neg  { color: var(--negative); }
+  .tab.active.edge { color: var(--edge); }
+
+  .tab-badge {
+    display: inline-block;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 100px;
+    background: var(--border);
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  /* test case cards */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .tc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .tc-card:hover { border-color: rgba(124,106,255,0.4); }
+
+  .tc-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .tc-id {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    min-width: 60px;
+  }
+
+  .tc-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .priority-badge {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: 1px solid;
+  }
+
+  .priority-badge.high   { color: var(--negative); border-color: rgba(255,106,106,0.4); }
+  .priority-badge.medium { color: var(--edge);     border-color: rgba(255,211,106,0.4); }
+  .priority-badge.low    { color: var(--muted);    border-color: var(--border); }
+
+  .chevron {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+
+  .tc-card.open .chevron { transform: rotate(180deg); }
+
+  .tc-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+    animation: fadeIn 0.2s ease;
+  }
+
+  .tc-card.open .tc-body { display: block; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 16px 0 8px;
+  }
+
+  .pre-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pre-list li {
+    font-size: 12px;
+    color: var(--text);
+    padding: 6px 10px;
+    background: var(--bg);
+    border-radius: 6px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .pre-list li::before { content: '·'; color: var(--muted); }
+
+  .steps-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .steps-table th {
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .steps-table td {
+    padding: 8px 10px;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+  }
+
+  .steps-table td:first-child {
+    color: var(--accent);
+    width: 32px;
+    text-align: center;
+  }
+
+  .steps-table td:last-child { color: var(--muted); }
+
+  .outcome-box {
+    font-size: 12px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--muted);
+  }
+
+  /* ── Export buttons ── */
+  .export-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  .btn-export {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-export:hover {
+    border-color: var(--accent);
+    background: var(--surface2);
+  }
+
+  .btn-export .icon { font-size: 14px; }
+
+  /* ── Error ── */
+  .error-box {
+    display: none;
+    background: rgba(255,106,106,0.08);
+    border: 1px solid rgba(255,106,106,0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--negative);
+  }
+
+  .error-box.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <span class="logo-tag">AI-Powered QA</span>
+      <h1>Test<span>Forge</span></h1>
+    </div>
+    <button class="status-pill" onclick="checkHealth()" title="Click to check API status">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">checking...</span>
+    </button>
+  </header>
+
+  <!-- Form -->
+  <div class="form-card">
+    <h2>Generate Test Cases</h2>
+
+    <div class="field">
+      <label>UI Description</label>
+      <textarea id="ui-desc" placeholder="Describe the UI component or screen in detail...
+e.g. A login form with email field, password field, show/hide toggle, and a submit button."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Product Requirements</label>
+      <textarea id="prod-req" placeholder="List the functional requirements and acceptance criteria...
+e.g. Email must be valid format. Password min 8 chars. Lock account after 5 failed attempts."></textarea>
+    </div>
+
+    <div class="row">
+      <div class="field" style="margin:0">
+        <label>Test Types</label>
+        <div class="check-group">
+          <label class="check-pill pos">
+            <input type="checkbox" value="positive" checked/>
+            <span><span class="dot-sm"></span> Positive</span>
+          </label>
+          <label class="check-pill neg">
+            <input type="checkbox" value="negative" checked/>
+            <span><span class="dot-sm"></span> Negative</span>
+          </label>
+          <label class="check-pill edge">
+            <input type="checkbox" value="edge_case" checked/>
+            <span><span class="dot-sm"></span> Edge Cases</span>
+          </label>
+        </div>
+      </div>
+      <div class="field" style="margin:0">
+        <label>Max per type</label>
+        <input type="number" id="max-per" value="3" min="1" max="10"/>
+      </div>
+    </div>
+
+    <button class="btn-run" id="run-btn" onclick="generate()">
+      ⚡ Generate Test Cases
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p>phi3 is thinking...</p>
+    <p class="gen-label" id="gen-label">initializing</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <div class="results-header">
+      <h2>Results</h2>
+      <div class="stats-row" id="stats-row"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div id="tab-panels"></div>
+
+    <div class="export-row">
+      <button class="btn-export" onclick="exportFile('json')">
+        <span class="icon">{ }</span> Export JSON
+      </button>
+      <button class="btn-export" onclick="exportFile('csv')">
+        <span class="icon">⊞</span> Export CSV
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8000/api/v1';
+let sessionId = null;
+
+// ── Health check ────────────────────────────────────────────────────────────
+async function checkHealth() {
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  try {
+    const r = await fetch(`${API}/health`);
+    const d = await r.json();
+    const ok = d.ollama === 'ok';
+    dot.className  = 'dot ' + (ok ? 'ok' : 'err');
+    text.textContent = ok ? `${d.model} · ready` : 'ollama offline';
+  } catch {
+    dot.className  = 'dot err';
+    text.textContent = 'API offline';
+  }
+}
+checkHealth();
+
+// ── Generate ────────────────────────────────────────────────────────────────
+async function generate() {
+  const ui  = document.getElementById('ui-desc').value.trim();
+  const req = document.getElementById('prod-req').value.trim();
+  const types = [...document.querySelectorAll('.check-pill input:checked')].map(e => e.value);
+  const max = parseInt(document.getElementById('max-per').value) || 3;
+
+  // Validate
+  hideError();
+  if (ui.length < 20)  return showError('UI description must be at least 20 characters.');
+  if (req.length < 20) return showError('Product requirements must be at least 20 characters.');
+  if (!types.length)   return showError('Select at least one test type.');
+
+  setLoading(true);
+
+  const labels = ['calling phi3...', 'building prompts...', 'parsing results...', 'almost done...'];
+  let li = 0;
+  const labelEl = document.getElementById('gen-label');
+  const interval = setInterval(() => {
+    labelEl.textContent = labels[li % labels.length]; li++;
+  }, 2500);
+
+  try {
+    const resp = await fetch(`${API}/generate-tests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ui_description: ui,
+        product_requirements: req,
+        test_types: types,
+        max_per_type: max
+      })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(err.detail || 'Generation failed');
+    }
+
+    const data = await resp.json();
+    sessionId = data.session_id;
+    renderResults(data);
+
+  } catch (e) {
+    showError(e.message || 'Failed to reach API. Is uvicorn running?');
+  } finally {
+    clearInterval(interval);
+    setLoading(false);
+  }
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderResults(data) {
+  // Stats
+  const sr = document.getElementById('stats-row');
+  sr.innerHTML = `
+    <span class="stat-chip total">⬡ ${data.total_count} total</span>
+    <span class="stat-chip pos">✓ ${data.positive_count} positive</span>
+    <span class="stat-chip neg">✗ ${data.negative_count} negative</span>
+    <span class="stat-chip edge">◈ ${data.edge_case_count} edge</span>
+  `;
+
+  const groups = { positive: [], negative: [], edge_case: [] };
+  data.test_cases.forEach(tc => { if (groups[tc.type]) groups[tc.type].push(tc); });
+
+  // Tabs
+  const tabDefs = [
+    { key: 'positive', label: 'Positive', cls: 'pos', icon: '✓' },
+    { key: 'negative', label: 'Negative', cls: 'neg', icon: '✗' },
+    { key: 'edge_case', label: 'Edge Cases', cls: 'edge', icon: '◈' },
+  ].filter(t => groups[t.key].length);
+
+  document.getElementById('tabs').innerHTML = tabDefs.map((t, i) => `
+    <button class="tab ${t.cls} ${i===0?'active':''}" onclick="switchTab('${t.key}', this)">
+      ${t.icon} ${t.label} <span class="tab-badge">${groups[t.key].length}</span>
+    </button>
+  `).join('');
+
+  // Panels
+  document.getElementById('tab-panels').innerHTML = tabDefs.map((t, i) => `
+    <div class="tab-panel ${i===0?'active':''}" id="panel-${t.key}">
+      ${groups[t.key].map(tc => renderCard(tc, t.cls)).join('')}
+    </div>
+  `).join('');
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderCard(tc, cls) {
+  const priority = tc.priority || 'medium';
+  const precHTML = (tc.preconditions||[]).map(p => `<li>${p}</li>`).join('');
+  const stepsHTML = (tc.steps||[]).map(s => `
+    <tr>
+      <td>${s.step_number}</td>
+      <td>${s.action}</td>
+      <td>${s.expected_result}</td>
+    </tr>
+  `).join('');
+  const tagsHTML = (tc.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
+
+  return `
+  <div class="tc-card" onclick="toggleCard(this)">
+    <div class="tc-head">
+      <span class="tc-id">#${tc.id}</span>
+      <span class="tc-title">${tc.title}</span>
+      <span class="priority-badge ${priority}">${priority}</span>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="tc-body">
+      ${precHTML ? `
+        <p class="section-label">Preconditions</p>
+        <ul class="pre-list">${precHTML}</ul>
+      ` : ''}
+      ${stepsHTML ? `
+        <p class="section-label">Steps</p>
+        <table class="steps-table">
+          <tr><th>#</th><th>Action</th><th>Expected Result</th></tr>
+          ${stepsHTML}
+        </table>
+      ` : ''}
+      ${tc.expected_outcome ? `
+        <p class="section-label">Expected Outcome</p>
+        <div class="outcome-box">${tc.expected_outcome}</div>
+      ` : ''}
+      ${tagsHTML ? `
+        <p class="section-label">Tags</p>
+        <div class="tag-list">${tagsHTML}</div>
+      ` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleCard(card) {
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.tc-card.open').forEach(c => c.classList.remove('open'));
+  if (!isOpen) card.classList.add('open');
+}
+
+function switchTab(key, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + key).classList.add('active');
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+async function exportFile(format) {
+  if (!sessionId) return;
+  try {
+    const resp = await fetch(`${API}/download/${sessionId}?format=${format}`);
+    if (!resp.ok) throw new Error('Export failed');
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `test_cases_${sessionId.slice(0,8)}.${format}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showError('Export failed: ' + e.message);
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loader').classList.toggle('show', on);
+  document.getElementById('run-btn').disabled = on;
+  if (!on) document.getElementById('results').classList.remove('show');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('error-box').classList.remove('show');
+}
+</script>
+</body>
+</html>
